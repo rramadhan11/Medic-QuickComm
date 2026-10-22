@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Medic QuickComm</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">+</span>
+        <span>Medic QuickComm</span>
+      </div>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#order" data-tab="order">New order</a>
+        <a href="#orders" data-tab="orders">Orders</a>
+        <a href="#stock" data-tab="stock">Stock</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="view-order" class="view" hidden>
+        <div class="grid">
+          <form id="order-form" class="card" autocomplete="off">
+            <h1>New order</h1>
+            <p class="muted">Pick products and quantities. The plan is computed and stock is reserved for review before you confirm.</p>
+
+            <fieldset>
+              <legend>Products</legend>
+              <div id="lines"></div>
+              <button type="button" id="add-line" class="btn ghost">+ Add product</button>
+            </fieldset>
+
+            <fieldset>
+              <legend>Urgency</legend>
+              <div class="segmented">
+                <label>
+                  <input type="radio" name="urgency" value="CITO" checked />
+                  <span><strong>CITO</strong><small>Urgent: earliest arrival wins</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="urgency" value="REGULAR" />
+                  <span><strong>Regular</strong><small>Routine: fewest shipments wins</small></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Dispatch time <span class="muted">(WIB, optional)</span></legend>
+              <input type="datetime-local" name="dispatch_at" aria-describedby="dispatch-hint" />
+              <small id="dispatch-hint">Leave empty to dispatch now. ETAs follow past traffic for that day and hour, e.g. Friday rush hour.</small>
+            </fieldset>
+
+            <div id="order-error" class="alert error" hidden></div>
+            <button type="submit" class="btn primary">Plan &amp; reserve</button>
+          </form>
+
+          <div id="order-result" class="result"></div>
+        </div>
+      </section>
+
+      <section id="view-orders" class="view" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h1>Orders</h1>
+            <button type="button" class="btn ghost" id="refresh-orders">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="orders-table">
+              <thead>
+                <tr><th>Created</th><th>Status</th><th>Urgency</th><th>Items</th><th>From</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p id="orders-empty" class="muted" hidden>No orders yet.</p>
+        </div>
+        <div id="orders-detail" class="result"></div>
+      </section>
+
+      <section id="view-stock" class="view" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h1>Warehouse stock</h1>
+            <button type="button" class="btn danger" id="reset-stock">Reset to baseline</button>
+          </div>
+          <p class="muted">Each cell shows <strong>available</strong> / on hand. Reserved units belong to pending orders and free up when those are cancelled or expire.</p>
+          <div class="table-wrap">
+            <table class="table" id="stock-table"></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Delivery times by dispatch period</h2>
+          <p class="muted">Estimated minutes from warehouse to customer, learned from past deliveries. Hover a cell for its evidence.</p>
+          <div class="table-wrap">
+            <table class="table" id="eta-table"></table>
+          </div>
+          <p class="legend">
+            <span><b>bold</b> = this warehouse's own history</span>
+            <span><i class="borrowed">italic</i> = borrowed from similar routes</span>
+            <span><span class="baseline">grey</span> = no history, distance only</span>
+          </p>
+        </div>
+
+        <form id="restock-form" class="card narrow" autocomplete="off">
+          <h2>Restock</h2>
+          <div class="row">
+            <label>Warehouse<select name="warehouse" required></select></label>
+            <label>Product<select name="product" required></select></label>
+            <label>Quantity<input name="quantity" type="number" min="1" max="100000" value="10" required /></label>
+          </div>
+          <div id="restock-message" class="alert" hidden></div>
+          <button type="submit" class="btn primary">Add stock</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
