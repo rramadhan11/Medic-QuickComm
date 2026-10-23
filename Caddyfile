@@ -1,4 +1,26 @@
 {$DOMAIN} {
 	encode gzip
+
+	# The largest valid order (50 lines) is a few KB; refuse anything far bigger before it
+	# reaches the app.
+	request_body {
+		max_size 64KB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+		-Via
+	}
+
+	# The UI loads only its own files. /docs and /redoc are left out: they load Swagger
+	# and ReDoc from a CDN with inline bootstrap scripts.
+	@ui not path /docs* /redoc*
+	header @ui Content-Security-Policy "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
 	reverse_proxy app:8000
 }
