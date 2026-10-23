@@ -4,9 +4,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .env
+.idea/
 
 # Working notes and the README (sent separately), kept out of the repository
 README.md
 PLAN.md
 history_session.md
 debate.md
+CHECKLIST.md
