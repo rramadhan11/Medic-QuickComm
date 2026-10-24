@@ -36,6 +36,7 @@ def create_order(
     eta_model: TimeAwareEtaModel,
     dispatch_at: datetime | None = None,
 ) -> Order:
+    # 1. Validate products and build the engine's input.
     dispatch_at = dispatch_at or now
     product_ids = [pid for pid, _ in lines]
     products = {
@@ -48,13 +49,21 @@ def create_order(
         for pid, qty in lines
     ]
 
+    # 2. Lock the stock rows before reading them, so a concurrent order waits for this
+    #    one to commit instead of reserving the same units.
     lock_stock(session, product_ids)
+
+    # 3. Plan against what's available now (on hand minus live reservations), with ETAs
+    #    for the dispatch time.
     plan = select_warehouses(
         requests, warehouse_options(session, now, product_ids, eta_model, dispatch_at), urgency
     )
+    # 4. Refuse an order with nothing to ship; the plan explains why.
     if not plan.shipments:
         raise Unprocessable("Nothing in this order can be fulfilled right now.", plan)
 
+    # 5. The allocations are the reservation: they count against availability until the
+    #    order is confirmed, cancelled or expires. on_hand is only deducted on confirm.
     backordered = {b.product_id: b.quantity for b in plan.backorders}
     order = Order(
         id=uuid.uuid4(),
@@ -74,6 +83,7 @@ def create_order(
             for i in s.items
         ],
     )
+    # 6. Commit saves the order and releases the locks; reload it with its relationships.
     session.add(order)
     session.commit()
     return get_order(session, order.id)

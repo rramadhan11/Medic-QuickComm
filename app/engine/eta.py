@@ -120,7 +120,14 @@ class TimeAwareEtaModel:
 
     @classmethod
     def fit(cls, samples: Sequence[DeliverySample]) -> "TimeAwareEtaModel":
+        # 1. Fit the distance-only line on every delivery; it ignores time of day.
         baseline = DistanceEtaModel.fit([(s.distance_km, s.duration_minutes) for s in samples])
+
+        # 2. Express each delivery as a traffic ratio: how much slower (> 1) or faster (< 1)
+        #    it was than the line predicts. Ratios, unlike minutes, transfer between
+        #    warehouses at different distances.
+        # 3. File each ratio twice: under its own warehouse, and under its route type for
+        #    warehouses with no history of their own in that period.
         own: dict[tuple[str, Period], list[float]] = defaultdict(list)
         pooled: dict[tuple[RouteType, Period], list[float]] = defaultdict(list)
         for s in samples:
@@ -140,6 +147,8 @@ class TimeAwareEtaModel:
     def estimate_for_period(
         self, warehouse_id: str, distance_km: float, period: Period
     ) -> EtaEstimate:
+        # Start from the distance line, then pick the most specific traffic evidence:
+        # this warehouse's own history, else its route type's, else none.
         base = self.baseline.estimate(distance_km)
         if ratios := self.own.get((warehouse_id, period)):
             source, n = EtaSource.WAREHOUSE, len(ratios)
@@ -156,4 +165,5 @@ class TimeAwareEtaModel:
             return EtaEstimate(
                 base, period, EtaSource.DISTANCE, 0, f"{period.label}, no history: distance only"
             )
+        # Median, not mean: with 1–5 deliveries per cell, one bad day shouldn't set the ETA.
         return EtaEstimate(base * median(ratios), period, source, n, basis)
